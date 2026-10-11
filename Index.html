@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alcancía cochinito</title>
+<style>
+*{box-sizing:border-box;user-select:none}
+body{margin:0;min-height:100vh;background:linear-gradient(145deg,#fbe9f0,#f8d5e0);font-family:'Segoe UI',Roboto,sans-serif;display:flex;justify-content:center;align-items:center;padding:16px;overflow-x:hidden}
+.game{background:rgba(255,245,250,.7);border-radius:56px;padding:28px 22px 34px;box-shadow:0 20px 35px rgba(180,100,130,.25);border:2px solid #fff2f9;max-width:720px;width:100%}
+h1{text-align:center;font-size:1.7rem;color:#7f3f5b;margin:0 0 12px;text-shadow:3px 3px 0 #fce4ec}
+.score{display:flex;justify-content:center;align-items:center;background:#ffeef4;padding:10px 24px;border-radius:100px;width:fit-content;margin:0 auto 18px;font-size:1.3rem;font-weight:bold;color:#5e2e42;gap:14px}
+.score span{background:#ffb8d0;padding:6px 18px;border-radius:40px;color:#3e1e2b;transition:transform .2s;display:inline-block}
+.score span.bump{transform:scale(1.35)}
+.stage{position:relative;height:300px;display:flex;justify-content:center;align-items:center;margin-bottom:10px}
+.piggy{width:260px;height:260px;cursor:pointer;transition:transform .1s,filter .2s;filter:drop-shadow(0 16px 12px rgba(150,80,100,.3));position:relative;z-index:2}
+.piggy:active{transform:scale(.96)}
+.piggy.disabled{cursor:not-allowed;filter:grayscale(.4);opacity:.85}
+.piggy svg{width:100%;height:100%}
+.piggy.shake{animation:shake .35s ease}
+.piggy.burst{animation:burst .6s cubic-bezier(.5,-0.5,.6,1.5) forwards;pointer-events:none}
+.piggy.reappear{animation:reappear .8s cubic-bezier(.2,1.4,.4,1) forwards;pointer-events:auto}
+@keyframes shake{0%,100%{transform:translateX(0) scale(1)}20%{transform:translateX(-8px) scale(1.05) rotate(-2deg)}40%{transform:translateX(8px) scale(1.08) rotate(2deg)}60%{transform:translateX(-6px) scale(1.1)}80%{transform:translateX(6px) scale(1.12)}}
+@keyframes burst{0%{transform:scale(1.15)}30%{transform:scale(1.5) rotate(8deg)}55%{transform:scale(.6);opacity:.7}100%{transform:scale(0) rotate(20deg);opacity:0}}
+@keyframes reappear{0%{transform:scale(0) rotate(-30deg);opacity:0;filter:brightness(2)}50%{transform:scale(1.2) rotate(10deg);opacity:1;filter:brightness(1.3)}75%{transform:scale(.9) rotate(-4deg)}100%{transform:scale(1) rotate(0);opacity:1;filter:brightness(1)}}
+.touch{margin-top:6px;background:#ffe2ed;padding:8px 24px;border-radius:40px;font-size:1.15rem;font-weight:600;color:#813c58;box-shadow:inset 0 -3px 0 #d9a5b9,0 6px 0 #b47a92;border:2px solid #ffc1d6;display:flex;align-items:center;gap:10px;transition:transform .15s}
+.touch.pop{transform:scale(1.15)}
+.touch span{background:#fff0f5;padding:4px 14px;border-radius:30px;font-size:1.5rem;min-width:50px;text-align:center;color:#b34167}
+.controls{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:14px}
+.cooldown{background:#d9c2ce;padding:10px 22px;border-radius:40px;font-size:1.05rem;font-weight:600;color:#3d2632;box-shadow:0 4px 0 #a78699;display:flex;align-items:center;gap:8px}
+.cooldown.active{background:#ffd0e0;box-shadow:0 4px 0 #c27f9b}
+.cooldown span{background:#2e1a24;color:#ffd9e8;padding:4px 14px;border-radius:30px;font-size:1.2rem;min-width:50px;text-align:center}
+.btn{border:none;font-size:1rem;font-weight:600;color:#7e4761;padding:10px 22px;border-radius:40px;cursor:pointer;border:2px solid #ffe2f0;transition:.1s}
+.btn:active{transform:translateY(4px)}
+.reset{background:#fff4fa;box-shadow:0 5px 0 #bf93a8}
+.withdraw-btn{background:linear-gradient(145deg,#ffd0e0,#ffb8d0);box-shadow:0 5px 0 #c27f9b;display:flex;align-items:center;gap:8px}
+.withdraw-btn svg{width:26px;height:26px}
+.msg{text-align:center;font-size:1.05rem;color:#8a4b66;margin:14px auto 0;font-weight:500;min-height:1.6rem;background:#fff0f7;padding:8px 16px;border-radius:30px;width:fit-content;border:1px dashed #f3b8cf;max-width:90%}
+.coin{position:absolute;width:64px;height:64px;background:radial-gradient(circle at 35% 35%,#ffe27a,#f7b32b 70%,#d18f1d);border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:2rem;box-shadow:0 6px 0 #b47c2a,0 8px 14px rgba(160,100,30,.4);border:3px solid #ffdb8a;cursor:pointer;z-index:5;transition:transform .12s;animation:coinFloat 2.4s ease-in-out infinite}
+.coin:hover{transform:scale(1.1)}
+.coin:active{transform:scale(.85)}
+.coin::before{content:"🐖";font-size:1.9rem;opacity:.95}
+@keyframes coinFloat{0%,100%{margin-top:0}50%{margin-top:-10px}}
+.coin.collected{animation:collect .55s ease forwards;pointer-events:none}
+@keyframes collect{0%{transform:scale(1) rotate(0);opacity:1}40%{transform:scale(1.4) rotate(180deg);filter:brightness(1.5)}100%{transform:scale(0) rotate(360deg);opacity:0}}
+.falling-coin{position:absolute;width:40px;height:40px;background:radial-gradient(circle at 35% 35%,#ffe27a,#f7b32b);border-radius:50%;box-shadow:0 4px 0 #b47c2a;border:2px solid #ffdb8a;z-index:1;pointer-events:none;display:flex;justify-content:center;align-items:center;font-size:1.1rem}
+.particle{position:absolute;width:14px;height:14px;border-radius:50%;z-index:1;pointer-events:none}
+.flash{position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,240,150,.9),rgba(255,200,100,0) 70%);pointer-events:none;z-index:0;animation:flash .6s ease forwards}
+@keyframes flash{0%{transform:scale(.3);opacity:1}100%{transform:scale(2.2);opacity:0}}
+.pending{position:absolute;top:6px;left:50%;transform:translateX(-50%);background:#ffd966;color:#7a4a12;font-weight:800;padding:6px 18px;border-radius:30px;font-size:1rem;box-shadow:0 4px 0 #c58f2c;border:2px solid #fff3c4;z-index:10;animation:popIn .3s ease}
+@keyframes popIn{0%{transform:translateX(-50%) scale(0)}100%{transform:translateX(-50%) scale(1)}}
+.modal-overlay{position:fixed;inset:0;background:rgba(80,30,55,.55);backdrop-filter:blur(4px);display:none;justify-content:center;align-items:center;z-index:100;padding:16px}
+.modal-overlay.show{display:flex;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:linear-gradient(160deg,#fff5fa,#ffe4ef);border-radius:36px;padding:26px 22px;max-width:420px;width:100%;box-shadow:0 25px 50px rgba(120,50,80,.4);border:3px solid #fff;max-height:90vh;overflow-y:auto;animation:slideUp .3s cubic-bezier(.2,1.2,.4,1)}
+@keyframes slideUp{from{transform:translateY(40px) scale(.9);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.modal-header h2{font-size:1.35rem;color:#7f3f5b;margin:0;display:flex;align-items:center;gap:8px}
+.modal-header svg{width:34px;height:34px}
+.close-btn{background:#ffd0e0;border:none;width:36px;height:36px;border-radius:50%;font-size:1.3rem;font-weight:bold;color:#7e4761;cursor:pointer;box-shadow:0 3px 0 #c27f9b;line-height:1}
+.close-btn:active{transform:translateY(3px);box-shadow:none}
+.balance-box{background:#fff;border-radius:24px;padding:14px;text-align:center;margin-bottom:16px;box-shadow:inset 0 3px 8px rgba(200,140,160,.2)}
+.balance-box p{margin:0;font-size:.85rem;color:#a5738a;font-weight:600}
+.balance-box strong{display:block;font-size:1.8rem;color:#b34167;margin-top:4px}
+.balance-box small{display:block;font-size:.75rem;color:#a5738a;margin-top:4px}
+.section-title{font-size:.9rem;color:#7f3f5b;font-weight:700;margin:14px 0 8px;text-transform:uppercase;letter-spacing:1px}
+.amounts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
+.amount-btn{position:relative;background:#fff;border:2px solid #ffd0e0;border-radius:20px;padding:10px 6px;font-size:.95rem;font-weight:800;color:#b34167;cursor:pointer;transition:.15s;box-shadow:0 4px 0 #f0c0d4;display:flex;flex-direction:column;align-items:center;gap:2px}
+.amount-btn:hover{background:#fff5fa;transform:translateY(-2px)}
+.amount-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #f0c0d4}
+.amount-btn.selected{background:linear-gradient(145deg,#ffd0e0,#ffb8d0);color:#5a1d37;box-shadow:0 4px 0 #c27f9b;border-color:#c27f9b}
+.amount-btn:disabled{opacity:.55;cursor:not-allowed;background:#f5eef2;color:#a58d99;box-shadow:0 4px 0 #d8c4ce}
+.amount-btn:disabled:hover{transform:none;background:#f5eef2}
+.amount-btn small{font-size:.68rem;font-weight:600;color:#a5738a}
+.amount-btn.selected small{color:#7a3a52}
+.amount-btn .lock{position:absolute;top:-8px;right:-6px;background:#ffb347;color:#fff;font-size:.95rem;width:24px;height:24px;border-radius:50%;display:flex;justify-content:center;align-items:center;box-shadow:0 3px 6px rgba(160,80,20,.4);border:2px solid #fff}
+.amount-btn.locked{background:#f5eef2}
+.amount-btn.locked small{color:#b09aa5}
+.email-field{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.email-field label{font-size:.85rem;color:#7f3f5b;font-weight:700}
+.email-field input{width:100%;padding:13px 16px;border-radius:20px;border:2px solid #ffd0e0;background:#fff;font-size:.95rem;color:#5e2e42;outline:none;transition:.15s;font-family:inherit;user-select:text}
+.email-field input:focus{border-color:#ff9eb5;box-shadow:0 0 0 4px rgba(255,158,181,.2)}
+.email-field input.error{border-color:#e46a6a;background:#fff5f5;animation:shake .3s ease}
+.email-hint{font-size:.72rem;color:#a5738a;margin:0;padding-left:4px}
+.locked-info{background:#fff0e0;border:2px dashed #ffb347;border-radius:20px;padding:12px;font-size:.82rem;color:#7a4a12;margin-top:10px;line-height:1.5;display:none}
+.locked-info.show{display:block;animation:popIn .3s ease}
+.locked-info b{color:#5c3608}
+.paypal-info{background:#eaf4ff;border:2px dashed #a8cdf0;border-radius:20px;padding:12px;font-size:.85rem;color:#3a5f80;text-align:center;margin:14px 0}
+.withdraw-action{width:100%;background:linear-gradient(145deg,#7fd17f,#4caf50);color:#fff;border:none;font-size:1.15rem;font-weight:800;padding:15px;border-radius:40px;cursor:pointer;box-shadow:0 6px 0 #2e7d32;margin-top:6px}
+.withdraw-action:active{transform:translateY(5px);box-shadow:0 1px 0 #2e7d32}
+.withdraw-action:disabled{background:#c8c8c8;box-shadow:0 6px 0 #999;cursor:not-allowed}
+.notice{background:#fff3c4;border:2px solid #ffd966;border-radius:20px;padding:12px;font-size:.82rem;color:#7a4a12;margin-top:14px;display:none;line-height:1.5}
+.notice.show{display:block;animation:popIn .3s ease}
+.history{margin-top:18px;border-top:2px dashed #ffd0e0;padding-top:12px}
+.history h3{font-size:.9rem;color:#7f3f5b;margin:0 0 8px}
+.history-item{background:#fff;border-radius:16px;padding:10px 14px;margin-bottom:8px;font-size:.82rem;color:#5e2e42;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 6px rgba(200,140,160,.15)}
+.history-item .status{background:#ffe8b0;color:#8a5a10;padding:3px 10px;border-radius:12px;font-weight:700;font-size:.72rem}
+.history-item .amount{font-weight:800;color:#b34167}
+.history-item .email{font-size:.7rem;color:#a5738a;display:block;margin-top:2px;word-break:break-all}
+</style>
+</head>
+<body>
+<div class="game">
+<h1>🐽 Alcancía cochinito 🐽</h1>
+<div class="score">⭐ Puntos <span id="score">0</span></div>
+<div class="stage" id="stage">
+<div class="piggy" id="piggy">
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+<circle cx="100" cy="110" r="70" fill="#FFB7C5" stroke="#E68AA0" stroke-width="3"/>
+<ellipse cx="55" cy="55" rx="20" ry="22" fill="#FF9EB5" stroke="#D46A85" stroke-width="3" transform="rotate(-20 55 55)"/>
+<ellipse cx="145" cy="55" rx="20" ry="22" fill="#FF9EB5" stroke="#D46A85" stroke-width="3" transform="rotate(20 145 55)"/>
+<circle cx="75" cy="95" r="8" fill="#2F1B24"/><circle cx="125" cy="95" r="8" fill="#2F1B24"/>
+<circle cx="78" cy="92" r="2.5" fill="white"/><circle cx="128" cy="92" r="2.5" fill="white"/>
+<ellipse cx="55" cy="120" rx="12" ry="8" fill="#FF8DA6" opacity=".6"/>
+<ellipse cx="145" cy="120" rx="12" ry="8" fill="#FF8DA6" opacity=".6"/>
+<ellipse cx="100" cy="125" rx="28" ry="22" fill="#FFA5BA" stroke="#D46A85" stroke-width="2"/>
+<ellipse cx="88" cy="125" rx="6" ry="8" fill="#E66788"/>
+<ellipse cx="112" cy="125" rx="6" ry="8" fill="#E66788"/>
+<circle cx="65" cy="172" r="16" fill="#FFA5BA" stroke="#D46A85" stroke-width="2"/>
+<circle cx="135" cy="172" r="16" fill="#FFA5BA" stroke="#D46A85" stroke-width="2"/>
+<path d="M168 130 Q185 120 180 105 Q175 95 185 90" stroke="#D46A85" stroke-width="4" fill="none" stroke-linecap="round"/>
+<circle cx="100" cy="40" r="8" fill="#F7B32B" stroke="#C58F2C" stroke-width="2"/>
+<text x="100" y="45" font-size="12" text-anchor="middle" fill="#A8641E" font-weight="bold">$</text>
+</svg>
+</div>
+</div>
+<div class="touch" id="touchBox">👆 Toques <span id="touches">0</span> / 3</div>
+<div class="controls">
+<div class="cooldown" id="cooldown">⏳ Espera <span id="timer">0</span>s</div>
+<button class="btn reset" id="reset">🔄 Reiniciar</button>
+<button class="btn withdraw-btn" id="withdrawBtn">
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+<circle cx="100" cy="110" r="70" fill="#FFB7C5" stroke="#C27F9B" stroke-width="6"/>
+<ellipse cx="55" cy="55" rx="20" ry="22" fill="#FF9EB5" stroke="#C27F9B" stroke-width="5" transform="rotate(-20 55 55)"/>
+<ellipse cx="145" cy="55" rx="20" ry="22" fill="#FF9EB5" stroke="#C27F9B" stroke-width="5" transform="rotate(20 145 55)"/>
+<circle cx="75" cy="95" r="8" fill="#2F1B24"/><circle cx="125" cy="95" r="8" fill="#2F1B24"/>
+<ellipse cx="100" cy="125" rx="28" ry="22" fill="#FFA5BA" stroke="#C27F9B" stroke-width="4"/>
+<ellipse cx="88" cy="125" rx="6" ry="8" fill="#D44E73"/>
+<ellipse cx="112" cy="125" rx="6" ry="8" fill="#D44E73"/>
+</svg>
+Retirar
+</button>
+</div>
+<div class="msg" id="msg">Toca al cochinito 3 veces para que explote y suelte monedas ⭐</div>
+</div>
+
+<div class="modal-overlay" id="modal">
+<div class="modal">
+<div class="modal-header">
+<h2>
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+<circle cx="100" cy="110" r="70" fill="#FFB7C5" stroke="#C27F9B" stroke-width="6"/>
+<ellipse cx="55" cy="55" rx="20" ry="22" fill="#FF9EB5" stroke="#C27F9B" stroke-width="5" transform="rotate(-20 55 55)"/>
+<ellipse cx="145" cy="55" rx="20" ry="22" fill="#FF9EB5" stroke="#C27F9B" stroke-width="5" transform="rotate(20 145 55)"/>
+<circle cx="75" cy="95" r="8" fill="#2F1B24"/><circle cx="125" cy="95" r="8" fill="#2F1B24"/>
+<ellipse cx="100" cy="125" rx="28" ry="22" fill="#FFA5BA" stroke="#C27F9B" stroke-width="4"/>
+<ellipse cx="88" cy="125" rx="6" ry="8" fill="#D44E73"/>
+<ellipse cx="112" cy="125" rx="6" ry="8" fill="#D44E73"/>
+</svg>
+Retirar fondos
+</h2>
+<button class="close-btn" id="closeModal">×</button>
+</div>
+<div class="balance-box">
+<p>⭐ Puntos disponibles</p>
+<strong id="modalPoints">0</strong>
+<small id="modalMoney">$0.00 USD</small>
+</div>
+<div class="section-title">Elige el monto a retirar</div>
+<div class="amounts" id="amounts"></div>
+<div class="locked-info" id="lockedInfo">🔒 <b>Montos bloqueados</b><br>Los retiros de <b>$0.10</b> y <b>$0.20</b> se desbloquean después de tu <b>primer retiro de $0.50</b> o más.</div>
+<div class="section-title">📧 Correo de PayPal</div>
+<div class="email-field">
+<label>Correo asociado a tu cuenta PayPal</label>
+<input type="email" id="paypalEmail" placeholder="tucorreo@ejemplo.com" autocomplete="email" spellcheck="false">
+<p class="email-hint">Aquí recibirás el pago cuando se acredite</p>
+</div>
+<div class="paypal-info">
+<strong>📧 PayPal:</strong> el pago se enviará al correo indicado<br>
+<small>Mínimo de retiro disponible: <span id="minLabel">$0.50 USD (1,500 pts)</span></small>
+</div>
+<button class="withdraw-action" id="confirmWithdraw" disabled>Solicitar retiro</button>
+<div class="notice" id="notice"><b>⏳ Retiro en proceso</b><br>Tu solicitud quedó <b>pendiente de acreditación</b>. El saldo se acreditará en un plazo de <b>3 días hábiles</b> al correo <b id="noticeEmail"></b>.</div>
+<div class="history" id="historySection" style="display:none">
+<h3>📋 Historial de retiros</h3>
+<div id="historyList"></div>
+</div>
+</div>
+</div>
+<script>
+(function(){
+let score=0,touches=0,cooldown=false,endTime=0,interval=null,pendingCoins=0,selectedAmount=null;
+let withdrawals=[],hasFirstWithdraw=false,gamesPlayed=0,coinsPerGame=10,waitTime=30;
+const POINTS_PER_COIN=2,PTS_PER_CENT=30;
+const AMOUNTS=[
+  {label:'$0.10',points:300,locked:true},
+  {label:'$0.20',points:600,locked:true},
+  {label:'$0.50',points:1500,locked:false},
+  {label:'$1',points:3000,locked:false},
+  {label:'$5',points:15000,locked:false},
+  {label:'$10',points:30000,locked:false}
+];
+const $=id=>document.getElementById(id);
+const piggy=$('piggy'),stage=$('stage'),scoreEl=$('score'),touchesEl=$('touches'),
+      touchBox=$('touchBox'),cd=$('cooldown'),timer=$('timer'),msg=$('msg');
+const modal=$('modal'),amountsEl=$('amounts'),confirmBtn=$('confirmWithdraw'),
+      notice=$('notice'),noticeEmail=$('noticeEmail'),modalPoints=$('modalPoints'),
+      modalMoney=$('modalMoney'),emailInput=$('paypalEmail'),
+      historySection=$('historySection'),historyList=$('historyList'),
+      lockedInfo=$('lockedInfo'),minLabel=$('minLabel');
+
+const updateUI=()=>{scoreEl.textContent=score;touchesEl.textContent=touches};
+const bump=()=>{scoreEl.classList.add('bump');setTimeout(()=>scoreEl.classList.remove('bump'),200)};
+const setEnabled=on=>piggy.classList.toggle('disabled',!on);
+const pointsToMoney=p=>'$'+(p/PTS_PER_CENT/100).toFixed(2);
+const validEmail=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+function checkMilestones(){
+  if(gamesPlayed>=20)coinsPerGame=5;
+  if(gamesPlayed>=30)waitTime=40;
+  if(gamesPlayed>=40)waitTime=45;
+}
+
+function revivePiggy(){
+  piggy.classList.remove('burst');
+  piggy.classList.add('reappear');
+  piggy.style.transform='';
+  setTimeout(()=>piggy.classList.remove('reappear'),800);
+  setEnabled(true);
+}
+
+function stopCooldown(){
+  if(!cooldown)return;
+  cooldown=false;clearInterval(interval);interval=null;
+  touches=0;updateUI();
+  cd.classList.remove('active');timer.textContent='0';
+  revivePiggy();
+  msg.textContent='✨ ¡El cochinito volvió! Toca 3 veces ✨';
+}
+
+function startCooldown(){
+  cooldown=true;endTime=Date.now()+waitTime*1000;
+  setEnabled(false);touches=0;updateUI();
+  cd.classList.add('active');
+  msg.textContent=`⏳ Espera ${waitTime} segundos para que el cochinito vuelva.`;
+  clearInterval(interval);
+  interval=setInterval(()=>{
+    const rem=endTime-Date.now();
+    if(rem<=0){stopCooldown();return}
+    timer.textContent=Math.ceil(rem/1000);
+  },200);
+}
+
+function spawnCoin(idx){
+  const coin=document.createElement('div');
+  coin.className='coin';
+  const r=stage.getBoundingClientRect(),p=50;
+  coin.style.left=(p+Math.random()*(r.width-p*2-64))+'px';
+  coin.style.top=(p+Math.random()*(r.height-p*2-64))+'px';
+  coin.style.animationDelay=(idx*0.08)+'s';
+  stage.appendChild(coin);
+  coin.addEventListener('click',()=>collectCoin(coin),{once:true});
+}
+
+function collectCoin(coin){
+  if(coin.classList.contains('collected'))return;
+  coin.classList.add('collected');
+  score+=POINTS_PER_COIN;updateUI();bump();
+  pendingCoins--;updatePendingLabel();
+  msg.textContent=`💰 +${POINTS_PER_COIN} pts · Monedas por recoger: ${pendingCoins}`;
+  setTimeout(()=>coin.remove(),600);
+  if(pendingCoins===0&&!cooldown){
+    gamesPlayed++;checkMilestones();
+    msg.textContent=`🎉 ¡Recogiste todas las monedas! Espera ${waitTime} segundos.`;
+    startCooldown();
+  }
+}
+
+function updatePendingLabel(){
+  let label=stage.querySelector('.pending');
+  if(pendingCoins>0){
+    if(!label){label=document.createElement('div');label.className='pending';stage.appendChild(label)}
+    label.textContent=`💰 ${pendingCoins} moneda${pendingCoins>1?'s':''} por tocar`;
+  }else if(label)label.remove();
+}
+
+function coinRain(){
+  const r=stage.getBoundingClientRect();
+  for(let i=0;i<20;i++){
+    const fc=document.createElement('div');
+    fc.className='falling-coin';fc.textContent='🪙';
+    fc.style.left=Math.random()*r.width+'px';fc.style.top='-40px';
+    stage.appendChild(fc);
+    const dur=1000+Math.random()*900;
+    fc.animate([
+      {transform:'translateY(0) rotate(0deg)',opacity:1},
+      {transform:`translateY(${r.height+80}px) rotate(${360+Math.random()*360}deg)`,opacity:.8}
+    ],{duration:dur,easing:'ease-in',delay:Math.random()*300});
+    setTimeout(()=>fc.remove(),dur+400);
+  }
+}
+
+function particles(){
+  const r=stage.getBoundingClientRect(),cx=r.width/2,cy=r.height/2;
+  const colors=['#ffb8d0','#ffd966','#ff9eb5','#fff3a0'];
+  for(let i=0;i<22;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    p.style.background=colors[i%colors.length];
+    p.style.left=cx+'px';p.style.top=cy+'px';
+    stage.appendChild(p);
+    const a=Math.random()*Math.PI*2,d=80+Math.random()*160;
+    p.animate([
+      {transform:'translate(-50%,-50%) scale(1)',opacity:1},
+      {transform:`translate(${Math.cos(a)*d-7}px,${Math.sin(a)*d-7}px) scale(0)`,opacity:0}
+    ],{duration:700+Math.random()*400,easing:'cubic-bezier(.2,.8,.4,1)'});
+    setTimeout(()=>p.remove(),1200);
+  }
+}
+
+function flash(){
+  const f=document.createElement('div');
+  f.className='flash';
+  f.style.left='50%';f.style.top='50%';f.style.transform='translate(-50%,-50%)';
+  stage.appendChild(f);
+  setTimeout(()=>f.remove(),650);
+}
+
+function explodePiggy(){
+  piggy.classList.add('burst');
+  flash();
+  setTimeout(particles,80);
+  coinRain();
+  setTimeout(()=>{
+    pendingCoins=coinsPerGame;updatePendingLabel();
+    msg.textContent=`💥 ¡Explotó! Toca las ${coinsPerGame} monedas (+${POINTS_PER_COIN} pts c/u)`;
+    for(let i=0;i<coinsPerGame;i++)setTimeout(()=>spawnCoin(i),i*120);
+  },450);
+}
+
+function clickPiggy(){
+  if(cooldown||touches>=3||piggy.classList.contains('burst'))return;
+  touches++;updateUI();
+  touchBox.classList.add('pop');
+  setTimeout(()=>touchBox.classList.remove('pop'),150);
+  piggy.classList.remove('shake');
+  void piggy.offsetWidth;
+  piggy.classList.add('shake');
+  if(touches===3){
+    msg.textContent='💥 ¡Tres toques! El cochinito va a explotar...';
+    setEnabled(false);
+    setTimeout(explodePiggy,350);
+  }else{
+    msg.textContent=touches===1?'¡Un toque! Faltan 2 👆👆':'¡Dos toques! Uno más 💥';
+  }
+}
+
+function resetGame(){
+  clearInterval(interval);interval=null;cooldown=false;
+  score=0;touches=0;pendingCoins=0;updateUI();
+  stage.querySelectorAll('.coin,.falling-coin,.particle,.flash,.pending').forEach(el=>el.remove());
+  piggy.classList.remove('burst','shake','reappear');
+  piggy.style.transform='';
+  setEnabled(true);
+  cd.classList.remove('active');timer.textContent='0';
+  msg.textContent='Toca al cochinito 3 veces para que explote y suelte monedas ⭐';
+}
+
+function buildAmounts(){
+  amountsEl.innerHTML='';
+  AMOUNTS.forEach(a=>{
+    const btn=document.createElement('button');
+    btn.className='amount-btn';
+    const isLocked=a.locked && !hasFirstWithdraw;
+    btn.innerHTML=`${isLocked?'<span class="lock">🔒</span>':''}${a.label}<small>${a.points.toLocaleString()} pts</small>`;
+    if(isLocked){btn.classList.add('locked');btn.disabled=true}
+    else if(score<a.points){btn.disabled=true}
+    else btn.addEventListener('click',()=>{
+      selectedAmount=a;
+      amountsEl.querySelectorAll('.amount-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      validateForm();
+    });
+    amountsEl.appendChild(btn);
+  });
+  lockedInfo.classList.toggle('show',!hasFirstWithdraw);
+  minLabel.textContent=hasFirstWithdraw?'$0.10 USD (300 pts)':'$0.50 USD (1,500 pts)';
+}
+
+function validateForm(){
+  confirmBtn.disabled=!(selectedAmount && validEmail(emailInput.value.trim()));
+}
+
+function openModal(){
+  modal.classList.add('show');
+  modalPoints.textContent=score.toLocaleString()+' pts';
+  modalMoney.textContent=pointsToMoney(score)+' USD';
+  notice.classList.remove('show');selectedAmount=null;
+  emailInput.value='';emailInput.classList.remove('error');
+  confirmBtn.disabled=true;
+  buildAmounts();renderHistory();
+}
+
+const closeModal=()=>modal.classList.remove('show');
+
+function confirmWithdraw(){
+  const email=emailInput.value.trim();
+  if(!selectedAmount||score<selectedAmount.points)return;
+  if(!validEmail(email)){
+    emailInput.classList.add('error');
+    setTimeout(()=>emailInput.classList.remove('error'),400);
+    return;
+  }
+  if(selectedAmount.points>=1500)hasFirstWithdraw=true;
+  score-=selectedAmount.points;updateUI();
+  modalPoints.textContent=score.toLocaleString()+' pts';
+  modalMoney.textContent=pointsToMoney(score)+' USD';
+  withdrawals.unshift({amount:selectedAmount.label,email,date:new Date()});
+  renderHistory();buildAmounts();
+  selectedAmount=null;confirmBtn.disabled=true;
+  noticeEmail.textContent=email;
+  notice.classList.add('show');
+  msg.textContent='⏳ Retiro solicitado · pendiente de acreditación (3 días)';
+  emailInput.value='';
+}
+
+function renderHistory(){
+  if(!withdrawals.length){historySection.style.display='none';return}
+  historySection.style.display='block';
+  historyList.innerHTML='';
+  withdrawals.slice(0,5).forEach(w=>{
+    const d=document.createElement('div');
+    d.className='history-item';
+    const f=w.date.toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
+    const h=w.date.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    d.innerHTML=`<div><span class="amount">${w.amount}</span><span class="email">📧 ${w.email}</span><small style="color:#a5738a">${f} ${h}</small></div><span class="status">pendiente</span>`;
+    historyList.appendChild(d);
+  });
+}
+
+piggy.addEventListener('click',clickPiggy);
+$('reset').addEventListener('click',resetGame);
+$('withdrawBtn').addEventListener('click',openModal);
+$('closeModal').addEventListener('click',closeModal);
+confirmBtn.addEventListener('click',confirmWithdraw);
+emailInput.addEventListener('input',validateForm);
+modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});
+updateUI();
+})();
+</script>
+</body>
+</html>
